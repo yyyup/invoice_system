@@ -52,15 +52,27 @@ def init_db():
             invoice_number TEXT UNIQUE NOT NULL,
             client_id INTEGER,
             contractor_id INTEGER,
-            service_name TEXT NOT NULL,
-            service_description TEXT,
-            quantity INTEGER DEFAULT 1,
-            rate REAL NOT NULL,
+            invoice_date DATE,
             total REAL NOT NULL,
             date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             status TEXT DEFAULT 'pending',
             FOREIGN KEY (client_id) REFERENCES clients (id),
             FOREIGN KEY (contractor_id) REFERENCES contractor_info (id)
+        )
+    ''')
+    
+    # Create invoice_items table for multiple line items per invoice
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS invoice_items (
+            id INTEGER PRIMARY KEY,
+            invoice_id INTEGER NOT NULL,
+            service_name TEXT NOT NULL,
+            service_description TEXT,
+            quantity INTEGER DEFAULT 1,
+            rate REAL NOT NULL,
+            amount REAL NOT NULL,
+            sort_order INTEGER DEFAULT 0,
+            FOREIGN KEY (invoice_id) REFERENCES invoices (id) ON DELETE CASCADE
         )
     ''')
     
@@ -75,6 +87,44 @@ def init_db():
             FOREIGN KEY (invoice_id) REFERENCES invoices (id)
         )
     ''')
+    
+    # If there are any legacy invoices without line items, migrate them
+    # Check if we have invoices but no invoice items (legacy data)
+    cursor.execute('SELECT COUNT(*) as invoice_count FROM invoices')
+    invoice_count = cursor.fetchone()['invoice_count']
+    
+    cursor.execute('SELECT COUNT(*) as item_count FROM invoice_items')
+    item_count = cursor.fetchone()['item_count']
+    
+    # If we have invoices but no items, migrate legacy data
+    if invoice_count > 0 and item_count == 0:
+        print("Migrating legacy invoice data to new line items structure...")
+        
+        # Get all invoices that have the old structure
+        cursor.execute('''
+            SELECT id, service_name, service_description, quantity, rate, total
+            FROM invoices 
+            WHERE service_name IS NOT NULL
+        ''')
+        legacy_invoices = cursor.fetchall()
+        
+        for invoice in legacy_invoices:
+            # Create a line item for each legacy invoice
+            cursor.execute('''
+                INSERT INTO invoice_items (invoice_id, service_name, service_description, quantity, rate, amount, sort_order)
+                VALUES (?, ?, ?, ?, ?, ?, 0)
+            ''', (
+                invoice['id'],
+                invoice['service_name'],
+                invoice['service_description'],
+                invoice['quantity'] or 1,
+                invoice['rate'],
+                invoice['total']
+            ))
+        
+        # Remove the old columns from invoices table (optional - for cleanup)
+        # Note: SQLite doesn't support DROP COLUMN directly, so we'll leave them for now
+        print(f"Migrated {len(legacy_invoices)} legacy invoices to new structure")
     
     conn.commit()
     conn.close()

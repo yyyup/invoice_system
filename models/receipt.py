@@ -11,7 +11,8 @@ class Receipt:
     def get_all_receipts():
         """Get all receipts with invoice and client information"""
         query = '''
-            SELECT r.receipt_number, i.invoice_number, c.name, i.service_name, 
+            SELECT r.receipt_number, i.invoice_number, c.name, 
+                   (SELECT GROUP_CONCAT(ii.service_name, ', ') FROM invoice_items ii WHERE ii.invoice_id = i.id LIMIT 3) as services,
                    r.paid_amount, r.payment_date
             FROM receipts r
             JOIN invoices i ON r.invoice_id = i.id
@@ -23,9 +24,10 @@ class Receipt:
     @staticmethod
     def get_receipt_by_number(receipt_number):
         """Get receipt by receipt number with full details"""
+        # First get the basic receipt and invoice info
         query = '''
             SELECT r.id, r.receipt_number, r.paid_amount, r.payment_date,
-                   i.invoice_number, i.service_name, i.service_description,
+                   i.invoice_number, i.invoice_date, i.total,
                    c.name as client_name, c.address as client_address, c.email as client_email, c.phone as client_phone,
                    co.name as contractor_name, co.address as contractor_address, co.email as contractor_email, 
                    co.phone as contractor_phone, co.tax_id as contractor_tax_id, co.personal_tax_id as contractor_personal_tax_id
@@ -35,7 +37,34 @@ class Receipt:
             JOIN contractor_info co ON i.contractor_id = co.id
             WHERE r.receipt_number = ?
         '''
-        return execute_query(query, (receipt_number,), fetch='one')
+        receipt = execute_query(query, (receipt_number,), fetch='one')
+        
+        if receipt:
+            # Get the line items for this invoice (use invoice_id from receipts table)
+            items_query = '''
+                SELECT service_name, service_description, quantity, rate, amount
+                FROM invoice_items
+                WHERE invoice_id = (SELECT invoice_id FROM receipts WHERE receipt_number = ?)
+                ORDER BY sort_order, id
+            '''
+            items = execute_query(items_query, (receipt_number,), fetch='all')
+            
+            # Convert to dict and add items
+            receipt_dict = dict(receipt)
+            receipt_dict['line_items'] = [dict(item) for item in items] if items else []
+            
+            # For backwards compatibility, add service_name and service_description from first item
+            if receipt_dict['line_items']:
+                first_item = receipt_dict['line_items'][0]
+                receipt_dict['service_name'] = first_item['service_name']
+                receipt_dict['service_description'] = first_item.get('service_description', '')
+            else:
+                receipt_dict['service_name'] = 'Services Rendered'
+                receipt_dict['service_description'] = ''
+            
+            return receipt_dict
+        
+        return None
     
     @staticmethod
     def create_receipt(invoice_id, paid_amount):

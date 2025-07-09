@@ -83,7 +83,9 @@ def get_custom_styles():
 
 def generate_invoice_pdf(invoice_data):
     """Generate professional invoice PDF"""
-    filename = f"invoice_{invoice_data['invoice_number']}.pdf"
+    # Format: Invoice_INV-0001_2025-07-12.pdf
+    invoice_date = invoice_data['invoice_date'].replace('-', '')  # Remove dashes: 20250712
+    filename = f"Invoice_{invoice_data['invoice_number']}_{invoice_date}.pdf"
     filepath = os.path.join(Config.INVOICE_PDF_FOLDER, filename)
     
     # Ensure directory exists
@@ -148,9 +150,9 @@ def generate_invoice_pdf(invoice_data):
     story.append(contact_table)
     story.append(Spacer(1, 20))
     
-    # Invoice details
+    # Invoice details - ONLY show invoice date (the one user set)
     details_data = [
-        ['Invoice Date:', invoice_data['date_created'].split(' ')[0]],
+        ['Invoice Date:', invoice_data['invoice_date']],  # Only the date user set
         ['Status:', 'Pending Payment' if invoice_data.get('status') == 'pending' else 'Paid']
     ]
     
@@ -179,9 +181,22 @@ def generate_invoice_pdf(invoice_data):
     
     # Add line items to table
     for item in invoice_data.get('line_items', []):
+        # Use Paragraph for description to enable text wrapping
+        desc_text = item.get('service_description', '')
+        if desc_text:
+            desc_paragraph = Paragraph(desc_text, ParagraphStyle(
+                'WrappedText',
+                parent=styles['Normal'],
+                fontSize=8,
+                leading=10,
+                alignment=TA_LEFT
+            ))
+        else:
+            desc_paragraph = ''
+        
         service_data.append([
             item['service_name'],
-            item.get('service_description', ''),
+            desc_paragraph,  # Use Paragraph instead of plain text
             str(item['quantity']),
             f"${item['rate']:.2f}",
             f"${item['amount']:.2f}"
@@ -204,7 +219,7 @@ def generate_invoice_pdf(invoice_data):
         ('FONTSIZE', (0, 1), (-1, -1), 9),  # Smaller data font
         ('ALIGN', (2, 1), (-1, -1), 'CENTER'),  # Center quantity, rate, total
         ('ALIGN', (0, 1), (1, -1), 'LEFT'),     # Left align service and description
-        ('VALIGN', (0, 1), (-1, -1), 'TOP'),    # Top align content
+        ('VALIGN', (0, 1), (-1, -1), 'TOP'),    # Top align content for proper wrapping
         ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
         ('BOTTOMPADDING', (0, 1), (-1, -1), 10),
         ('TOPPADDING', (0, 1), (-1, -1), 10),
@@ -250,8 +265,10 @@ def generate_invoice_pdf(invoice_data):
     return filepath
 
 def generate_receipt_pdf(receipt_data):
-    """Generate professional receipt PDF"""
-    filename = f"receipt_{receipt_data['receipt_number']}.pdf"
+    """Generate professional receipt PDF - optimized for single page"""
+    # Format: Receipt_REC-0001_2025-07-12.pdf
+    payment_date = receipt_data['payment_date'].split(' ')[0].replace('-', '')  # Remove dashes: 20250712
+    filename = f"Receipt_{receipt_data['receipt_number']}_{payment_date}.pdf"
     filepath = os.path.join(Config.RECEIPT_PDF_FOLDER, filename)
     
     # Ensure directory exists
@@ -260,16 +277,16 @@ def generate_receipt_pdf(receipt_data):
     doc = SimpleDocTemplate(
         filepath, 
         pagesize=letter,
-        topMargin=0.5*inch,
-        bottomMargin=0.5*inch,
-        leftMargin=0.75*inch,
-        rightMargin=0.75*inch
+        topMargin=0.4*inch,      # Reduced top margin
+        bottomMargin=0.4*inch,   # Reduced bottom margin
+        leftMargin=0.6*inch,     # Reduced left margin
+        rightMargin=0.6*inch     # Reduced right margin
     )
     
     styles = get_custom_styles()
     story = []
     
-    # Header with title
+    # Header with title - more compact
     title = Paragraph(f"PAYMENT RECEIPT", styles['CustomTitle'])
     story.append(title)
     
@@ -278,9 +295,9 @@ def generate_receipt_pdf(receipt_data):
     
     # Add horizontal line
     story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#27ae60')))
-    story.append(Spacer(1, 20))
+    story.append(Spacer(1, 12))  # Reduced spacing
     
-    # Create two-column layout for FROM and TO
+    # Create two-column layout for FROM and TO - more compact
     contact_data = [
         [
             Paragraph('<b>FROM:</b>', styles['SectionHeader']),
@@ -304,73 +321,138 @@ def generate_receipt_pdf(receipt_data):
         ]
     ]
     
-    contact_table = Table(contact_data, colWidths=[3.5*inch, 3.5*inch])
+    contact_table = Table(contact_data, colWidths=[4*inch, 4*inch])  # Wider columns
     contact_table.setStyle(TableStyle([
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ('LEFTPADDING', (0, 0), (-1, -1), 0),
         ('RIGHTPADDING', (0, 0), (-1, -1), 0),
         ('TOPPADDING', (0, 0), (-1, -1), 0),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),  # Reduced padding
     ]))
     
     story.append(contact_table)
-    story.append(Spacer(1, 20))
+    story.append(Spacer(1, 12))  # Reduced spacing
     
-    # Payment details
+    # Payment details - using payment_date (which should be the invoice date when paid)
     details_data = [
         ['Payment Date:', receipt_data['payment_date'].split(' ')[0]],
         ['Invoice Number:', receipt_data['invoice_number']],
-        ['Service:', receipt_data['service_name']]
+        ['Services:', f"{len(receipt_data.get('line_items', []))} item(s)" if receipt_data.get('line_items') else receipt_data.get('service_name', 'Services Rendered')]
     ]
     
-    details_table = Table(details_data, colWidths=[2*inch, 3*inch])
+    details_table = Table(details_data, colWidths=[1.5*inch, 2.5*inch])  # Adjusted widths
     details_table.setStyle(TableStyle([
         ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),  # Smaller font
         ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#27ae60')),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),  # Reduced padding
     ]))
     
     story.append(details_table)
-    story.append(Spacer(1, 30))
+    story.append(Spacer(1, 15))  # Reduced spacing
     
-    # Description section (if exists)
-    if receipt_data.get('service_description'):
+    # Services section - show line items if available
+    if receipt_data.get('line_items'):
+        service_header = Paragraph('SERVICES PROVIDED', styles['SectionHeader'])
+        story.append(service_header)
+        story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#bdc3c7')))
+        story.append(Spacer(1, 8))  # Reduced spacing
+        
+        # Service table with multiple line items - more compact
+        service_data = [
+            ['Service', 'Description', 'Qty', 'Rate', 'Amount']
+        ]
+        
+        # Add line items to table
+        for item in receipt_data['line_items']:
+            # Use Paragraph for description to enable text wrapping
+            desc_text = item.get('service_description', '')
+            if desc_text:
+                desc_paragraph = Paragraph(desc_text, ParagraphStyle(
+                    'WrappedText',
+                    parent=styles['Normal'],
+                    fontSize=7,  # Smaller font for receipt
+                    leading=9,
+                    alignment=TA_LEFT
+                ))
+            else:
+                desc_paragraph = ''
+            
+            service_data.append([
+                item['service_name'],
+                desc_paragraph,  # Use Paragraph instead of truncated text
+                str(item['quantity']),
+                f"${item['rate']:.2f}",
+                f"${item['amount']:.2f}"
+            ])
+        
+        # More compact column widths
+        service_table = Table(service_data, colWidths=[2.2*inch, 2.2*inch, 0.6*inch, 1*inch, 1*inch])
+        service_table.setStyle(TableStyle([
+            # Header row - compact
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#27ae60')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 8),  # Smaller header font
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 6),  # Reduced padding
+            ('TOPPADDING', (0, 0), (-1, 0), 6),
+            
+            # Data rows - compact
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),  # Smaller data font
+            ('ALIGN', (2, 1), (-1, -1), 'CENTER'),
+            ('ALIGN', (0, 1), (1, -1), 'LEFT'),
+            ('VALIGN', (0, 1), (-1, -1), 'TOP'),  # Top align for proper text wrapping
+            ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 8),  # Increased padding for wrapped text
+            ('TOPPADDING', (0, 1), (-1, -1), 8),
+            
+            # Grid
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#bdc3c7')),  # Thinner grid lines
+            ('LINEBELOW', (0, 0), (-1, 0), 2, colors.HexColor('#27ae60')),
+        ]))
+        
+        story.append(service_table)
+        story.append(Spacer(1, 12))  # Reduced spacing
+    
+    # Description section (if exists and only one service) - more compact
+    elif receipt_data.get('service_description'):
         desc_header = Paragraph('SERVICE DESCRIPTION', styles['SectionHeader'])
         story.append(desc_header)
         story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#bdc3c7')))
-        story.append(Spacer(1, 10))
+        story.append(Spacer(1, 6))  # Reduced spacing
         
         description = Paragraph(receipt_data['service_description'], styles['Description'])
         story.append(description)
-        story.append(Spacer(1, 20))
+        story.append(Spacer(1, 12))  # Reduced spacing
     
-    # Amount received section
+    # Amount received section - more compact
     story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#27ae60')))
-    story.append(Spacer(1, 15))
+    story.append(Spacer(1, 10))  # Reduced spacing
     
     amount_data = [
         ['', 'AMOUNT RECEIVED:', f"${receipt_data['paid_amount']:.2f} only"]
     ]
     
-    amount_table = Table(amount_data, colWidths=[4*inch, 1.5*inch, 1.5*inch])
+    amount_table = Table(amount_data, colWidths=[3.5*inch, 1.8*inch, 1.7*inch])  # Adjusted widths
     amount_table.setStyle(TableStyle([
         ('FONTNAME', (1, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (1, 0), (-1, 0), 14),
+        ('FONTSIZE', (1, 0), (-1, 0), 12),  # Smaller font
         ('TEXTCOLOR', (1, 0), (-1, 0), colors.HexColor('#2c3e50')),
         ('ALIGN', (1, 0), (-1, 0), 'RIGHT'),
-        ('PADDING', (1, 0), (-1, 0), 12),
+        ('PADDING', (1, 0), (-1, 0), 8),  # Reduced padding
     ]))
     
     story.append(amount_table)
-    story.append(Spacer(1, 30))
+    story.append(Spacer(1, 15))  # Reduced spacing
     
-    # Legal confirmation section
+    # Legal confirmation section - more compact
     confirmation_header = Paragraph('PAYMENT CONFIRMATION', styles['SectionHeader'])
     story.append(confirmation_header)
     story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#bdc3c7')))
-    story.append(Spacer(1, 15))
+    story.append(Spacer(1, 8))  # Reduced spacing
     
     confirmation_text = f"""
     I, <b>{receipt_data['contractor_name']}</b>, hereby confirm that I have received the payment of 
@@ -380,9 +462,9 @@ def generate_receipt_pdf(receipt_data):
     
     confirmation = Paragraph(confirmation_text, styles['Description'])
     story.append(confirmation)
-    story.append(Spacer(1, 30))
+    story.append(Spacer(1, 15))  # Reduced spacing
     
-    # Thank you message
+    # Thank you message - more compact
     thank_you = Paragraph(
         "<b>Thank you for your payment!</b><br/>This receipt serves as proof of payment.",
         styles['Description']

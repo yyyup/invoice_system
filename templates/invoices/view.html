@@ -46,18 +46,65 @@
             <h6>Invoice Details</h6>
             <div class="row">
                 <div class="col-md-6">
-                    <strong>Date:</strong> {{ invoice['date_created'].split(' ')[0] }}<br>
-                    <strong>Service:</strong> {{ invoice['service_name'] }}<br>
-                    {% if invoice['service_description'] %}
-                    <strong>Description:</strong> {{ invoice['service_description'] }}<br>
-                    {% endif %}
+                    <strong>Invoice Date:</strong> {{ invoice['invoice_date'] }}<br>
+                    <strong>Date Created:</strong> {{ invoice['date_created'].split(' ')[0] }}<br>
+                    <strong>Status:</strong> {{ invoice['status'].title() }}
                 </div>
                 <div class="col-md-6">
-                    <strong>Quantity:</strong> {{ invoice['quantity'] }}<br>
-                    <strong>Rate:</strong> ${{ "%.2f"|format(invoice['rate']) }}<br>
-                    <strong>Status:</strong> {{ invoice['status'].title() }}<br>
+                    <strong>Invoice Number:</strong> {{ invoice['invoice_number'] }}<br>
+                    <strong>Total Services:</strong> {{ invoice['line_items']|length }} item(s)
                 </div>
             </div>
+        </div>
+        
+        <!-- Line Items Section -->
+        <div class="invoice-details">
+            <h6>Services Provided</h6>
+            {% if invoice['line_items'] %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Service</th>
+                            <th>Description</th>
+                            <th>Qty</th>
+                            <th>Rate</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in invoice['line_items'] %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td><strong>{{ item['service_name'] }}</strong></td>
+                            <td>
+                                {% if item['service_description'] %}
+                                    {{ item['service_description'] }}
+                                {% else %}
+                                    <span class="text-muted">No description</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ item['quantity'] }}</td>
+                            <td>${{ "%.2f"|format(item['rate']) }}</td>
+                            <td><strong>${{ "%.2f"|format(item['amount']) }}</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-success">
+                            <th colspan="5" class="text-end">Grand Total:</th>
+                            <th>${{ "%.2f"|format(invoice['total']) }}</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                No line items found for this invoice.
+            </div>
+            {% endif %}
         </div>
         
         <div class="total-amount">
@@ -90,4 +137,37 @@
         </div>
     </div>
 </div>
+
+<!-- Print Styles -->
+<style>
+@media print {
+    .btn, .navbar, .footer {
+        display: none !important;
+    }
+    
+    .invoice-header, .invoice-details {
+        page-break-inside: avoid;
+    }
+    
+    .table {
+        font-size: 12px;
+    }
+    
+    .total-amount {
+        border: 2px solid #000;
+        padding: 10px;
+        margin: 20px 0;
+    }
+}
+
+.badge-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.badge-success {
+    background-color: #28a745;
+    color: white;
+}
+</style>
 {% endblock %}

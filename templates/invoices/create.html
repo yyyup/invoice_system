@@ -4,64 +4,63 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-8">
+    <div class="col-md-10">
         <div class="form-section">
             <h2><i class="fas fa-plus-circle"></i> Create New Invoice</h2>
-            <p class="text-muted">Generate a new invoice for your client.</p>
+            <p class="text-muted">Generate a professional invoice with multiple line items.</p>
             
-            <form method="POST" novalidate>
-                <div class="mb-3">
-                    <label for="client_id" class="form-label">Client *</label>
-                    <select class="form-control" id="client_id" name="client_id" required>
-                        <option value="">Select Client</option>
-                        {% for client_id, client_name in clients %}
-                        <option value="{{ client_id }}">{{ client_name }}</option>
-                        {% endfor %}
-                    </select>
-                    <div class="form-text">Choose the client for this invoice</div>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="service_name" class="form-label">Service/Product Name *</label>
-                    <input type="text" class="form-control" id="service_name" name="service_name" required>
-                    <div class="form-text">Brief name of the service or product</div>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="service_description" class="form-label">Service Description</label>
-                    <textarea class="form-control" id="service_description" name="service_description" rows="3" 
-                              placeholder="Detailed description of the service or product"></textarea>
-                    <div class="form-text">Optional detailed description</div>
-                </div>
-                
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="mb-3">
-                            <label for="quantity" class="form-label">Quantity *</label>
-                            <input type="number" class="form-control" id="quantity" name="quantity" 
-                                   value="1" min="1" step="1" required>
-                            <div class="form-text">Number of units</div>
-                        </div>
+            <!-- Service Examples -->
+            <div class="alert alert-info">
+                <h6><i class="fas fa-lightbulb"></i> Example Services:</h6>
+                <small>
+                    <strong>Localization Services:</strong> Voice Acting Studio Coordination, Audio Integration, Lip Syncing Animation<br>
+                    <strong>Development Services:</strong> Frontend Development, Backend API, Database Design<br>
+                    <strong>Consulting:</strong> Strategy Planning, Implementation, Training
+                </small>
+            </div>
+            
+            <form method="POST" id="invoiceForm" novalidate>
+                <!-- Basic Invoice Information -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label for="client_id" class="form-label">Client *</label>
+                        <select class="form-control" id="client_id" name="client_id" required>
+                            <option value="">Select Client</option>
+                            {% for client_id, client_name in clients %}
+                            <option value="{{ client_id }}">{{ client_name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Choose the client for this invoice</div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="mb-3">
-                            <label for="rate" class="form-label">Rate *</label>
-                            <input type="number" class="form-control" id="rate" name="rate" 
-                                   step="0.01" min="0" required>
-                            <div class="form-text">Price per unit</div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="mb-3">
-                            <label class="form-label">Total</label>
-                            <div class="total-amount" id="total-display">$0.00</div>
-                        </div>
+                    <div class="col-md-6">
+                        <label for="invoice_date" class="form-label">Invoice Date *</label>
+                        <input type="date" class="form-control" id="invoice_date" name="invoice_date" required>
+                        <div class="form-text">Date when the invoice is issued</div>
                     </div>
                 </div>
                 
+                <!-- Line Items Section -->
+                <h4><i class="fas fa-list"></i> Services / Line Items</h4>
+                <div id="line-items-container">
+                    <!-- Line items will be inserted here by JavaScript -->
+                </div>
+                
+                <button type="button" class="btn btn-outline-primary w-100 mb-3" onclick="addLineItem()" style="border: 2px dashed; padding: 1rem;">
+                    <i class="fas fa-plus"></i> Add Another Service
+                </button>
+                
+                <!-- Total Section -->
+                <div class="card bg-success text-white text-center mb-4">
+                    <div class="card-body">
+                        <h3 class="card-title mb-0" id="grand-total">$0.00</h3>
+                        <small>Grand Total (automatically calculated)</small>
+                    </div>
+                </div>
+                
+                <!-- Form Actions -->
                 <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                     <a href="{{ url_for('invoice.list_invoices') }}" class="btn btn-secondary me-md-2">Cancel</a>
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" class="btn btn-primary btn-lg">
                         <i class="fas fa-save"></i> Create Invoice
                     </button>
                 </div>
@@ -69,4 +68,185 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.line-item {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background-color: #f8f9fa;
+    position: relative;
+}
+
+.line-item-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.line-item-number {
+    background: var(--bs-primary);
+    color: white;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.875rem;
+}
+
+.remove-item-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+</style>
+
+<script>
+let itemCounter = 0;
+
+// Initialize with one line item and set today's date
+document.addEventListener('DOMContentLoaded', function() {
+    // Set today's date as default
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('invoice_date').value = today;
+    
+    // Add first line item
+    addLineItem();
+});
+
+function addLineItem() {
+    itemCounter++;
+    const container = document.getElementById('line-items-container');
+    
+    const lineItemHtml = `
+        <div class="line-item" id="line-item-${itemCounter}">
+            <div class="line-item-header">
+                <div class="line-item-number">${itemCounter}</div>
+                <h6 class="ms-3 mb-0">Service ${itemCounter}</h6>
+                ${itemCounter > 1 ? `<button type="button" class="btn btn-sm btn-outline-danger remove-item-btn" onclick="removeLineItem(${itemCounter})"><i class="fas fa-times"></i></button>` : ''}
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <label class="form-label">Service Name *</label>
+                    <input type="text" class="form-control" name="line_items[${itemCounter}][service_name]" 
+                           placeholder="e.g., Voice Acting Studio Coordination" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Description</label>
+                    <input type="text" class="form-control" name="line_items[${itemCounter}][service_description]" 
+                           placeholder="Optional detailed description">
+                </div>
+            </div>
+            
+            <div class="row mt-3">
+                <div class="col-md-3">
+                    <label class="form-label">Quantity *</label>
+                    <input type="number" class="form-control quantity-input" name="line_items[${itemCounter}][quantity]" 
+                           value="1" min="1" step="1" required onchange="calculateLineTotal(${itemCounter})">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Rate (USD) *</label>
+                    <input type="number" class="form-control rate-input" name="line_items[${itemCounter}][rate]" 
+                           step="0.01" min="0" placeholder="5000.00" required onchange="calculateLineTotal(${itemCounter})">
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label">Line Total</label>
+                    <div class="form-control bg-light line-total" id="line-total-${itemCounter}">$0.00</div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', lineItemHtml);
+    updateGrandTotal();
+}
+
+function removeLineItem(itemId) {
+    if (document.querySelectorAll('.line-item').length <= 1) {
+        alert('You must have at least one service line item.');
+        return;
+    }
+    
+    const lineItem = document.getElementById(`line-item-${itemId}`);
+    if (lineItem) {
+        lineItem.remove();
+        updateLineItemNumbers();
+        updateGrandTotal();
+    }
+}
+
+function calculateLineTotal(itemId) {
+    const lineItem = document.getElementById(`line-item-${itemId}`);
+    const quantity = parseFloat(lineItem.querySelector('.quantity-input').value) || 0;
+    const rate = parseFloat(lineItem.querySelector('.rate-input').value) || 0;
+    const total = quantity * rate;
+    
+    const totalElement = document.getElementById(`line-total-${itemId}`);
+    totalElement.textContent = `$${total.toFixed(2)}`;
+    
+    updateGrandTotal();
+}
+
+function updateLineItemNumbers() {
+    const lineItems = document.querySelectorAll('.line-item');
+    lineItems.forEach((item, index) => {
+        const numberElement = item.querySelector('.line-item-number');
+        const headerElement = item.querySelector('.line-item-header h6');
+        if (numberElement) numberElement.textContent = index + 1;
+        if (headerElement) headerElement.textContent = `Service ${index + 1}`;
+    });
+}
+
+function updateGrandTotal() {
+    const lineItems = document.querySelectorAll('.line-item');
+    let grandTotal = 0;
+    
+    lineItems.forEach(item => {
+        const quantity = parseFloat(item.querySelector('.quantity-input').value) || 0;
+        const rate = parseFloat(item.querySelector('.rate-input').value) || 0;
+        grandTotal += quantity * rate;
+    });
+    
+    document.getElementById('grand-total').textContent = `$${grandTotal.toFixed(2)}`;
+}
+
+// Form validation
+document.getElementById('invoiceForm').addEventListener('submit', function(e) {
+    const lineItems = document.querySelectorAll('.line-item');
+    
+    if (lineItems.length === 0) {
+        e.preventDefault();
+        alert('Please add at least one service line item.');
+        return;
+    }
+    
+    let hasValidItems = false;
+    lineItems.forEach(item => {
+        const serviceName = item.querySelector('input[name*="service_name"]').value.trim();
+        const rate = parseFloat(item.querySelector('input[name*="rate"]').value) || 0;
+        
+        if (serviceName && rate > 0) {
+            hasValidItems = true;
+        }
+    });
+    
+    if (!hasValidItems) {
+        e.preventDefault();
+        alert('Please ensure at least one line item has a service name and rate greater than 0.');
+        return;
+    }
+    
+    // Show loading state
+    const submitBtn = this.querySelector('button[type="submit"]');
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Invoice...';
+    submitBtn.disabled = true;
+});
+</script>
 {% endblock %}

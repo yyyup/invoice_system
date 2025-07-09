@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Receipt {{ receipt['receipt_number'] }} - Invoice System{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="invoice-header">
+            <h1>Receipt #{{ receipt['receipt_number'] }}</h1>
+            <p class="lead">Payment Confirmation</p>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="invoice-details">
+                    <h6>From:</h6>
+                    <strong>{{ receipt['contractor_name'] }}</strong><br>
+                    {{ receipt['contractor_address']|replace('\n', '<br>')|safe }}<br>
+                    {{ receipt['contractor_email'] }}<br>
+                    {{ receipt['contractor_phone'] }}<br>
+                    {% if receipt['contractor_tax_id'] %}
+                    <strong>Tax ID:</strong> {{ receipt['contractor_tax_id'] }}<br>
+                    {% endif %}
+                    {% if receipt['contractor_personal_tax_id'] %}
+                    <strong>Personal Tax ID:</strong> {{ receipt['contractor_personal_tax_id'] }}<br>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="invoice-details">
+                    <h6>To:</h6>
+                    <strong>{{ receipt['client_name'] }}</strong><br>
+                    {{ receipt['client_address']|replace('\n', '<br>')|safe }}<br>
+                    {{ receipt['client_email'] }}<br>
+                    {{ receipt['client_phone'] }}<br>
+                </div>
+            </div>
+        </div>
+        
+        <div class="invoice-details">
+            <h6>Payment Details</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <strong>Payment Date:</strong> {{ receipt['payment_date'].split(' ')[0] }}<br>
+                    <strong>Invoice Number:</strong> 
+                    <a href="{{ url_for('invoice.view_invoice', invoice_number=receipt['invoice_number']) }}">
+                        {{ receipt['invoice_number'] }}
+                    </a><br>
+                    <strong>Service:</strong> {{ receipt['service_name'] }}<br>
+                    {% if receipt['service_description'] %}
+                    <strong>Description:</strong> {{ receipt['service_description'] }}<br>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <strong>Receipt Number:</strong> {{ receipt['receipt_number'] }}<br>
+                    <strong>Amount Paid:</strong> ${{ "%.2f"|format(receipt['paid_amount']) }} only<br>
+                </div>
+            </div>
+        </div>
+        
+        <div class="total-amount">
+            <strong>Amount Received: ${{ "%.2f"|format(receipt['paid_amount']) }} only</strong>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-body">
+                <p class="card-text">
+                    <em>I, {{ receipt['contractor_name'] }}, confirm that I have received the payment of 
+                    ${{ "%.2f"|format(receipt['paid_amount']) }} only in full from {{ receipt['client_name'] }}.</em>
+                </p>
+                <p class="text-muted mb-0">Thank you for your payment!</p>
+            </div>
+        </div>
+        
+        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+            <a href="{{ url_for('receipt.list_receipts') }}" class="btn btn-secondary me-md-2">
+                <i class="fas fa-arrow-left"></i> Back to Receipts
+            </a>
+            <a href="{{ url_for('invoice.view_invoice', invoice_number=receipt['invoice_number']) }}" 
+               class="btn btn-info me-md-2">
+                <i class="fas fa-file-invoice"></i> View Invoice
+            </a>
+            <a href="{{ url_for('receipt.download_receipt', receipt_number=receipt['receipt_number']) }}" 
+               class="btn btn-success">
+                <i class="fas fa-download"></i> Download Receipt PDF
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

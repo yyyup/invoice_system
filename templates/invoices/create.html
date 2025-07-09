@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Create Invoice - Invoice System{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="form-section">
+            <h2><i class="fas fa-plus-circle"></i> Create New Invoice</h2>
+            <p class="text-muted">Generate a new invoice for your client.</p>
+            
+            <form method="POST" novalidate>
+                <div class="mb-3">
+                    <label for="client_id" class="form-label">Client *</label>
+                    <select class="form-control" id="client_id" name="client_id" required>
+                        <option value="">Select Client</option>
+                        {% for client_id, client_name in clients %}
+                        <option value="{{ client_id }}">{{ client_name }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-text">Choose the client for this invoice</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="service_name" class="form-label">Service/Product Name *</label>
+                    <input type="text" class="form-control" id="service_name" name="service_name" required>
+                    <div class="form-text">Brief name of the service or product</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="service_description" class="form-label">Service Description</label>
+                    <textarea class="form-control" id="service_description" name="service_description" rows="3" 
+                              placeholder="Detailed description of the service or product"></textarea>
+                    <div class="form-text">Optional detailed description</div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="quantity" class="form-label">Quantity *</label>
+                            <input type="number" class="form-control" id="quantity" name="quantity" 
+                                   value="1" min="1" step="1" required>
+                            <div class="form-text">Number of units</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="rate" class="form-label">Rate *</label>
+                            <input type="number" class="form-control" id="rate" name="rate" 
+                                   step="0.01" min="0" required>
+                            <div class="form-text">Price per unit</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label class="form-label">Total</label>
+                            <div class="total-amount" id="total-display">$0.00</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <a href="{{ url_for('invoice.list_invoices') }}" class="btn btn-secondary me-md-2">Cancel</a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Create Invoice
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

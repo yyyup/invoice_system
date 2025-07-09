@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Invoice System{% endblock %}
+
+{% block content %}
+<div class="dashboard-stats">
+    <div class="row">
+        <div class="col-md-8">
+            <h1>Invoice System Dashboard</h1>
+            <p class="lead">Manage your invoices, clients, and receipts efficiently</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <i class="fas fa-chart-line fa-4x opacity-50"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Setup Alert -->
+{% if not contractor_setup %}
+<div class="alert alert-warning" role="alert">
+    <i class="fas fa-exclamation-triangle"></i>
+    <strong>Setup Required:</strong> Please <a href="{{ url_for('contractor.setup') }}" class="alert-link">setup your contractor information</a> before creating invoices.
+</div>
+{% endif %}
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-file-invoice fa-2x text-primary mb-3"></i>
+                <h5 class="card-title">Total Invoices</h5>
+                <h3 class="text-primary">{{ invoice_stats.total_invoices }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-clock fa-2x text-warning mb-3"></i>
+                <h5 class="card-title">Pending</h5>
+                <h3 class="text-warning">{{ invoice_stats.pending_invoices }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-check-circle fa-2x text-success mb-3"></i>
+                <h5 class="card-title">Paid</h5>
+                <h3 class="text-success">{{ invoice_stats.paid_invoices }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-users fa-2x text-info mb-3"></i>
+                <h5 class="card-title">Clients</h5>
+                <h3 class="text-info">{{ client_count }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Financial Overview -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-dollar-sign"></i> Total Revenue</h5>
+            </div>
+            <div class="card-body">
+                <h3 class="text-success">${{ "%.2f"|format(invoice_stats.total_amount) }}</h3>
+                <small class="text-muted">All time</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-hourglass-half"></i> Pending Amount</h5>
+            </div>
+            <div class="card-body">
+                <h3 class="text-warning">${{ "%.2f"|format(invoice_stats.pending_amount) }}</h3>
+                <small class="text-muted">Awaiting payment</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-check"></i> Collected Amount</h5>
+            </div>
+            <div class="card-body">
+                <h3 class="text-success">${{ "%.2f"|format(invoice_stats.paid_amount) }}</h3>
+                <small class="text-muted">Successfully collected</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="quick-actions">
+    <a href="{{ url_for('invoice.create_invoice') }}" class="quick-action-card">
+        <i class="fas fa-plus-circle"></i>
+        <h5>Create Invoice</h5>
+        <p>Generate a new invoice for a client</p>
+    </a>
+    
+    <a href="{{ url_for('client.add_client') }}" class="quick-action-card">
+        <i class="fas fa-user-plus"></i>
+        <h5>Add Client</h5>
+        <p>Add a new client to your database</p>
+    </a>
+    
+    <a href="{{ url_for('invoice.list_invoices') }}" class="quick-action-card">
+        <i class="fas fa-list"></i>
+        <h5>View Invoices</h5>
+        <p>Manage all your invoices</p>
+    </a>
+    
+    <a href="{{ url_for('receipt.list_receipts') }}" class="quick-action-card">
+        <i class="fas fa-receipt"></i>
+        <h5>View Receipts</h5>
+        <p>Check payment receipts</p>
+    </a>
+</div>
+
+<!-- Recent Activities -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-clock"></i> Recent Invoices</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_invoices %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Invoice #</th>
+                                <th>Client</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for invoice in recent_invoices %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('invoice.view_invoice', invoice_number=invoice[0]) }}">
+                                        {{ invoice[0] }}
+                                    </a>
+                                </td>
+                                <td>{{ invoice[1] }}</td>
+                                <td>${{ "%.2f"|format(invoice[3]) }}</td>
+                                <td>
+                                    <span class="badge badge-{{ 'success' if invoice[5] == 'paid' else 'warning' }}">
+                                        {{ invoice[5].title() }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No invoices created yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-history"></i> Recent Receipts</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_receipts %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Receipt #</th>
+                                <th>Client</th>
+                                <th>Amount</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for receipt in recent_receipts %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('receipt.view_receipt', receipt_number=receipt[0]) }}">
+                                        {{ receipt[0] }}
+                                    </a>
+                                </td>
+                                <td>{{ receipt[2] }}</td>
+                                <td>${{ "%.2f"|format(receipt[3]) }}</td>
+                                <td>{{ receipt[4].split(' ')[0] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No receipts generated yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

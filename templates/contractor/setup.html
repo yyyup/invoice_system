@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Contractor Setup - Invoice System{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="form-section">
+            <h2><i class="fas fa-user-cog"></i> Contractor Information Setup</h2>
+            <p class="text-muted">Configure your business information that will appear on invoices and receipts.</p>
+            
+            <form method="POST" novalidate>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Business/Name *</label>
+                            <input type="text" class="form-control" id="name" name="name" 
+                                   value="{{ contractor[1] if contractor else '' }}" required>
+                            <div class="form-text">Your business name or personal name</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   value="{{ contractor[3] if contractor else '' }}">
+                            <div class="form-text">Your business email address</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="address" class="form-label">Business Address</label>
+                    <textarea class="form-control" id="address" name="address" rows="3" 
+                              placeholder="Enter your complete business address">{{ contractor[2] if contractor else '' }}</textarea>
+                    <div class="form-text">Complete address including street, city, state, and postal code</div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" id="phone" name="phone" 
+                                   value="{{ contractor[4] if contractor else '' }}">
+                            <div class="form-text">Your business phone number</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="tax_id" class="form-label">Tax ID / EIN</label>
+                            <input type="text" class="form-control" id="tax_id" name="tax_id" 
+                                   value="{{ contractor[5] if contractor else '' }}">
+                            <div class="form-text">Business tax identification number</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="personal_tax_id" class="form-label">Personal Tax ID / SSN</label>
+                    <input type="text" class="form-control" id="personal_tax_id" name="personal_tax_id" 
+                           value="{{ contractor[6] if contractor else '' }}">
+                    <div class="form-text">Your personal tax identification number</div>
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <a href="{{ url_for('main.index') }}" class="btn btn-secondary me-md-2">Cancel</a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Information
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Information Card -->
+<div class="row justify-content-center mt-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> Important Information</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-check text-success"></i> This information will appear on all invoices and receipts</li>
+                    <li><i class="fas fa-check text-success"></i> You can update this information at any time</li>
+                    <li><i class="fas fa-check text-success"></i> Tax ID fields are optional but recommended for business use</li>
+                    <li><i class="fas fa-check text-success"></i> All data is stored locally on your system</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Form validation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(event) {
+        const name = document.getElementById('name');
+        
+        if (!name.value.trim()) {
+            event.preventDefault();
+            name.classList.add('is-invalid');
+            name.focus();
+            return false;
+        }
+        
+        // Remove invalid class on successful validation
+        name.classList.remove('is-invalid');
+        
+        // Show loading state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        submitBtn.disabled = true;
+    });
+    
+    // Real-time validation
+    document.getElementById('name').addEventListener('input', function() {
+        this.classList.remove('is-invalid');
+    });
+});
+</script>
+{% endblock %}

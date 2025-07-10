@@ -53,6 +53,7 @@ def init_db():
             client_id INTEGER,
             contractor_id INTEGER,
             invoice_date DATE,
+            leave_date_blank INTEGER DEFAULT 0,
             total REAL NOT NULL,
             date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             status TEXT DEFAULT 'pending',
@@ -83,6 +84,7 @@ def init_db():
             invoice_id INTEGER,
             receipt_number TEXT UNIQUE NOT NULL,
             paid_amount REAL NOT NULL,
+            leave_date_blank INTEGER DEFAULT 0,
             payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (invoice_id) REFERENCES invoices (id)
         )

@@ -26,7 +26,7 @@ class Receipt:
         """Get receipt by receipt number with full details"""
         # First get the basic receipt and invoice info
         query = '''
-            SELECT r.id, r.receipt_number, r.paid_amount, r.payment_date,
+            SELECT r.id, r.receipt_number, r.paid_amount, r.payment_date, r.leave_date_blank,
                    i.invoice_number, i.invoice_date, i.total,
                    c.name as client_name, c.address as client_address, c.email as client_email, c.phone as client_phone,
                    co.name as contractor_name, co.address as contractor_address, co.email as contractor_email, 
@@ -74,12 +74,17 @@ class Receipt:
         count_result = execute_query(count_query, fetch='one')
         receipt_number = f"{Config.RECEIPT_PREFIX}{(count_result['count'] + 1):04d}"
         
+        # Get the invoice's leave_date_blank setting
+        invoice_query = "SELECT leave_date_blank FROM invoices WHERE id = ?"
+        invoice_result = execute_query(invoice_query, (invoice_id,), fetch='one')
+        leave_date_blank = invoice_result['leave_date_blank'] if invoice_result else 0
+        
         query = '''
-            INSERT INTO receipts (invoice_id, receipt_number, paid_amount, payment_date)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO receipts (invoice_id, receipt_number, paid_amount, leave_date_blank, payment_date)
+            VALUES (?, ?, ?, ?, ?)
         '''
         params = (
-            invoice_id, receipt_number, paid_amount, 
+            invoice_id, receipt_number, paid_amount, leave_date_blank,
             datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         )
         

@@ -150,9 +150,11 @@ def generate_invoice_pdf(invoice_data):
     story.append(contact_table)
     story.append(Spacer(1, 20))
     
-    # Invoice details - ONLY show invoice date (the one user set)
+    # Invoice details - with option for blank dates
+    invoice_date_display = invoice_data.get('leave_date_blank', False) and "________________" or invoice_data['invoice_date']
+    
     details_data = [
-        ['Invoice Date:', invoice_data['invoice_date']],  # Only the date user set
+        ['Invoice Date:', invoice_date_display],  # Show blank line or actual date
         ['Status:', 'Pending Payment' if invoice_data.get('status') == 'pending' else 'Paid']
     ]
     
@@ -333,9 +335,11 @@ def generate_receipt_pdf(receipt_data):
     story.append(contact_table)
     story.append(Spacer(1, 12))  # Reduced spacing
     
-    # Payment details - using payment_date (which should be the invoice date when paid)
+    # Payment details - with option for blank dates
+    payment_date_display = receipt_data.get('leave_date_blank', False) and "________________" or receipt_data['payment_date'].split(' ')[0]
+    
     details_data = [
-        ['Payment Date:', receipt_data['payment_date'].split(' ')[0]],
+        ['Payment Date:', payment_date_display],  # Show blank line or actual date
         ['Invoice Number:', receipt_data['invoice_number']],
         ['Services:', f"{len(receipt_data.get('line_items', []))} item(s)" if receipt_data.get('line_items') else receipt_data.get('service_name', 'Services Rendered')]
     ]

@@ -29,7 +29,7 @@ class Invoice:
         """Get invoice by invoice number with full details including line items"""
         # Get invoice header
         query = '''
-            SELECT i.id, i.invoice_number, i.client_id, i.contractor_id, i.invoice_date,
+            SELECT i.id, i.invoice_number, i.client_id, i.contractor_id, i.invoice_date, i.leave_date_blank,
                    i.total, i.date_created, i.status,
                    c.name as client_name, c.address as client_address, c.email as client_email, c.phone as client_phone, 
                    co.name as contractor_name, co.address as contractor_address, co.email as contractor_email, 
@@ -71,12 +71,12 @@ class Invoice:
         
         # Insert invoice header
         invoice_query = '''
-            INSERT INTO invoices (invoice_number, client_id, contractor_id, invoice_date, total, date_created)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO invoices (invoice_number, client_id, contractor_id, invoice_date, leave_date_blank, total, date_created)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         '''
         invoice_params = (
             invoice_number, data['client_id'], data['contractor_id'], 
-            data['invoice_date'], total, datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            data['invoice_date'], data.get('leave_date_blank', 0), total, datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         )
         
         invoice_id = execute_query(invoice_query, invoice_params)
@@ -112,10 +112,10 @@ class Invoice:
         # Update invoice header
         update_query = '''
             UPDATE invoices 
-            SET client_id=?, invoice_date=?, total=?
+            SET client_id=?, invoice_date=?, leave_date_blank=?, total=?
             WHERE id=? AND status='pending'
         '''
-        execute_query(update_query, (data['client_id'], data['invoice_date'], total, invoice_id))
+        execute_query(update_query, (data['client_id'], data['invoice_date'], data.get('leave_date_blank', 0), total, invoice_id))
         
         # Delete existing line items
         execute_query('DELETE FROM invoice_items WHERE invoice_id = ?', (invoice_id,))

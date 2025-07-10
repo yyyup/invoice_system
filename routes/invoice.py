@@ -58,10 +58,17 @@ def create_invoice():
             flash('Please add at least one line item!', 'error')
             return redirect(url_for('invoice.create_invoice'))
         
+        # Get invoice date from form
+        invoice_date = request.form.get('invoice_date')
+        if not invoice_date:
+            flash('Please select an invoice date!', 'error')
+            return redirect(url_for('invoice.create_invoice'))
+        
         data = {
             'client_id': request.form['client_id'],
             'contractor_id': contractor['id'],
-            'invoice_date': request.form['invoice_date'],
+            'invoice_date': invoice_date,
+            'leave_date_blank': 1 if 'leave_date_blank' in request.form else 0,
             'line_items': line_items
         }
         
@@ -136,9 +143,16 @@ def edit_invoice(invoice_number):
             flash('Please add at least one line item!', 'error')
             return redirect(url_for('invoice.edit_invoice', invoice_number=invoice_number))
         
+        # Get invoice date from form
+        invoice_date = request.form.get('invoice_date')
+        if not invoice_date:
+            flash('Please select an invoice date!', 'error')
+            return redirect(url_for('invoice.edit_invoice', invoice_number=invoice_number))
+        
         data = {
             'client_id': request.form['client_id'],
-            'invoice_date': request.form['invoice_date'],
+            'invoice_date': invoice_date,
+            'leave_date_blank': 1 if 'leave_date_blank' in request.form else 0,
             'line_items': line_items
         }
         
